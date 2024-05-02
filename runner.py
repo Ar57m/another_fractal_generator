@@ -1,8 +1,21 @@
 import numpy as np
 from PIL import Image
 #%pip install cython
-import cython
-from fractal_generator import fractal, julia_set
+#import cython
+#import pybind11
+
+from ctypes import cdll, c_int, c_double, POINTER
+
+
+
+# Carregue a biblioteca
+lib = cdll.LoadLibrary('./libfract.so')
+
+
+fractal = lib.fractal
+juliaset = lib.juliaset
+fractal.argtypes = [POINTER(c_int), c_int, c_int, c_int, c_double, c_double, c_double, c_double]
+juliaset.argtypes = [POINTER(c_int), c_int, c_int, c_int, c_double, c_double, c_double, c_double, c_double, c_double]
 
 
 # Here I'm using some of my functions of my other project random_tools on github
@@ -46,7 +59,7 @@ def tensor_to_image(tensor, imgname, newmin= None, newmax= None):
         imag = Image.fromarray(cor_rgb)
         del cor_rgb
         imag.save(f'{imgname}.png')
-        print(f'and {imgname}.png' )
+        print(f'{imgname}.png' )
 
 
 def image_to_array(image_path, min=0, max=2**24-1):
@@ -94,23 +107,43 @@ def create_image(palette, data, filename, top_colors=4):
 
 
 width = 4096 # I'm using ratio 16/9
-height = 2304
+height = 4096 #2304
 
 # Here you can move around 
-xmin, xmax = -16/5, 16/6
-ymin, ymax = -9/5, 9/5
+xmin, xmax = -16/5, 16/5
+ymin, ymax = -16/5, 16/5
 
-max_iterations = 1000
-mandelbrot_set = fractal(width, height, xmin, xmax, ymin, ymax, max_iterations)
+max_iter = 1000
+
+import time
+start_time = time.perf_counter()
+
+mandelbrot_set = np.empty((height, width), dtype=np.int32)
+fractal(mandelbrot_set.ctypes.data_as(POINTER(c_int)), width, height, max_iter, xmin, xmax, ymin, ymax)
+
+end_time = time.perf_counter()
+
+print("Took ", end_time - start_time, "seconds to generate")
 
 
-create_image("palette.png",mandelbrot_set.T, "colorful", top_colors=7)
-tensor_to_image(mandelbrot_set.T,"generated_fractal", 0,2**24-1)
+create_image("palette.png",mandelbrot_set, "colorful", top_colors=7)
+tensor_to_image(mandelbrot_set,"generated_fractal", 0,2**24-1)
 
-julia_set = julia_set(width, height, -0.8, 0.16, xmin, xmax, ymin, ymax, max_iterations)
 
-create_image("palette.png",julia_set.T, "colorful_julia_set", top_colors=7)
-tensor_to_image(julia_set.T,"generated_fractal_julia_set", 0,2**24-1)
+
+
+start_time = time.perf_counter()
+
+julia_set = np.empty((height, width), dtype=np.int32)
+juliaset(julia_set.ctypes.data_as(POINTER(c_int)), width, height, max_iter, -0.257443, 0.659694, xmin, xmax, ymin, ymax)
+
+end_time = time.perf_counter()
+
+print("Took ", end_time - start_time, "seconds to generate")
+
+
+create_image("palette.png",julia_set, "colorful_julia_set", top_colors=7)
+tensor_to_image(julia_set, "generated_fractal_julia_set", 0,2**24-1)
 
 
 
