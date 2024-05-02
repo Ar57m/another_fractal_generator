@@ -135,7 +135,7 @@ tensor_to_image(mandelbrot_set,"generated_fractal", 0,2**24-1)
 start_time = time.perf_counter()
 
 julia_set = np.empty((height, width), dtype=np.int32)
-juliaset(julia_set.ctypes.data_as(POINTER(c_int)), width, height, max_iter, -0.257443, 0.659694, xmin, xmax, ymin, ymax)
+juliaset(julia_set.ctypes.data_as(POINTER(c_int)), width, height, max_iter, -0.8, 0.16, xmin, xmax, ymin, ymax)
 
 end_time = time.perf_counter()
 
