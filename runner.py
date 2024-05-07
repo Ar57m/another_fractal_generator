@@ -158,7 +158,7 @@ juliaset_c_real = -0.8
 juliaset_c_imag = 0.16
 
 # Makes the part that converges visible
-lake = True
+lake = False
 
 
 
