@@ -86,7 +86,7 @@ def image_to_array(image_path, min=0, max=2**24-1):
 # Image with palette
 def create_image(palette, data, filename, top_colors=4):
     data = data.copy()
-    shape = data.shape
+    shape = data.T.shape
     palette = image_to_array(palette)
     unique_colors, counts = np.unique(palette, return_counts=True)
     sorted_indices = np.argsort(counts)[::-1]
