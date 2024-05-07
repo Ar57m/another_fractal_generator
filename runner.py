@@ -4,7 +4,7 @@ import numpy as np
 #import cython
 
 import cv2
-from ctypes import cdll, c_double, POINTER, c_uint32, c_uint16, c_uint8
+from ctypes import cdll, c_double, POINTER, c_uint32, c_uint16, c_uint8, c_bool
 
 
 
@@ -20,8 +20,8 @@ lib.process_array.argtypes = [POINTER(c_uint32), POINTER(c_uint8), c_uint16, c_u
 lib.process_array.restype = None
 
 
-fractal.argtypes = [POINTER(c_uint16), c_uint16, c_uint16, c_uint16, c_double, c_double, c_double, c_double]
-juliaset.argtypes = [POINTER(c_uint16), c_uint16, c_uint16, c_uint16, c_double, c_double, c_double, c_double, c_double, c_double]
+fractal.argtypes = [POINTER(c_uint16), c_uint16, c_uint16, c_uint16, c_double, c_double, c_double, c_double, c_bool]
+juliaset.argtypes = [POINTER(c_uint16), c_uint16, c_uint16, c_uint16, c_double, c_double, c_double, c_double, c_double, c_double, c_bool]
 
 
 # Here I'm using some of my functions of my other project random_tools on github
@@ -49,7 +49,7 @@ def process_image(input_array, max_val, imgname):
     lib.process_array(input_array, output_array, width, height, max_val, 5000, max)
     # Convert the output array to a numpy array
     output_array = np.ctypeslib.as_array(output_array).reshape(width, height, 3 )
-    
+
     output_image = cv2.cvtColor(output_array, cv2.COLOR_BGR2RGB) 
     
     del output_array
@@ -102,10 +102,10 @@ def create_image(palette, data, filename, top_colors=4):
 
 # Not working properly
 def depth_to_intensity(rgb_image, depth_map):
-    depth_map = depth_map.astype(np.float64)
-    normalized_depth = (depth_map / np.max(depth_map))
+    depth_map = (depth_map).astype(np.float64)
+    normalized_depth = (1-(depth_map / np.max(depth_map)))
     
-    intensity_image = rgb_image.astype(np.float64) * normalized_depth.reshape(-1) #[:,np.newaxis]
+    intensity_image = rgb_image.astype(np.float64) * normalized_depth.reshape(rgb_image.shape[0],-1,1) #[:,np.newaxis]
     
     return np.round(intensity_image).astype(np.uint8)
 
@@ -113,20 +113,25 @@ def depth_to_intensity(rgb_image, depth_map):
 
 
 
-width = 4096 # I'm using ratio 1/1
-height = 4096 #2304
+width = int(4096) # I'm using ratio 1/1
+height = int(4096) #2304
 
 # Here you can move around 
 xmin, xmax = -16/6, 16/6   #-16/5, 16/5
 ymin, ymax = -16/6, 16/6   #-9/5, 9/5
 
+
 max_iter = 1000
 
 # How many top colors to use from the palette.png
-top_colors = 6
+top_colors = 10
 
+# Julia set parameters
 juliaset_c_real = -0.8
 juliaset_c_imag = 0.16
+
+# Makes the part that converges visible
+lake = False
 
 
 
@@ -137,26 +142,35 @@ import time
 start_time = time.perf_counter()
 
 mandelbrot_set = np.empty((height, width), dtype=np.uint16)
-fractal(mandelbrot_set.ctypes.data_as(POINTER(c_uint16)), width, height, max_iter, xmin, xmax, ymin, ymax)
+fractal(mandelbrot_set.ctypes.data_as(POINTER(c_uint16)), width, height, max_iter, xmin, xmax, ymin, ymax, lake)
 
 end_time = time.perf_counter()
 
 print("Took ", end_time - start_time, "seconds to generate")
+
+start_time = time.perf_counter()
 process_image(mandelbrot_set, (2**24-1), "generated_fractal" )
 create_image("palette.png",mandelbrot_set.reshape(width, height), "colorful", top_colors=top_colors)
+end_time = time.perf_counter()
+print("Took ", end_time - start_time, "seconds to convert")
 
 
 # Julia Set
 start_time = time.perf_counter()
 
 julia_set = np.empty((height, width), dtype=np.uint16)
-juliaset(julia_set.ctypes.data_as(POINTER(c_uint16)), width, height, max_iter, juliaset_c_real, juliaset_c_imag, xmin, xmax, ymin, ymax)
+juliaset(julia_set.ctypes.data_as(POINTER(c_uint16)), width, height, max_iter, juliaset_c_real, juliaset_c_imag, xmin, xmax, ymin, ymax, lake)
 
 end_time = time.perf_counter()
 
 print("Took ", end_time - start_time, "seconds to generate")
+
+start_time = time.perf_counter()
 process_image(julia_set, (2**24-1), "generated_fractal_julia_set" )
 create_image("palette.png",julia_set.reshape(width, height), "colorful_julia_set", top_colors=top_colors)
+end_time = time.perf_counter()
+
+print("Took ", end_time - start_time, "seconds to convert")
 
 
 
