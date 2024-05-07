@@ -86,7 +86,7 @@ def image_to_array(image_path, min=0, max=2**24-1):
 # Image with palette
 def create_image(palette, data, filename, top_colors=4):
     data = data.copy()
-    shape = data.shape
+    shape = data.T.shape
     palette = image_to_array(palette)
     unique_colors, counts = np.unique(palette, return_counts=True)
     sorted_indices = np.argsort(counts)[::-1]
@@ -98,9 +98,27 @@ def create_image(palette, data, filename, top_colors=4):
     for i, n in enumerate(array_top_colors):
         data[data == i] = n
     process_image(data.reshape(shape), np.float64(np.max(data)), filename )
- 
 
-# Not working properly
+
+# This helps you to aim by dividing in squares(grid)
+def divide_in_squares(list_c, xmin, xmax, ymin, ymax):
+    list_c[:,:2] = list_c[:,:2]-1
+    for col, line, n_squares in list_c:
+        size_x = (xmax - xmin) / n_squares
+        size_y = (ymax - ymin) / n_squares
+        
+        new_xmin = xmin + col * size_x
+        new_xmax = xmin + (col + 1) * size_x
+        new_ymin = ymin + line * size_y
+        new_ymax = ymin + (line + 1) * size_y
+        xmin, xmax, ymin, ymax = new_xmin, new_xmax, new_ymin, new_ymax
+    
+    return xmin, xmax, ymin, ymax
+
+
+
+
+# Not working properly yet
 def depth_to_intensity(rgb_image, depth_map):
     depth_map = (depth_map).astype(np.float64)
     normalized_depth = (1-(depth_map / np.max(depth_map)))
@@ -116,11 +134,20 @@ def depth_to_intensity(rgb_image, depth_map):
 width = int(4096) # I'm using ratio 1/1
 height = int(4096) #2304
 
+
 # Here you can move around 
 xmin, xmax = -16/6, 16/6   #-16/5, 16/5
 ymin, ymax = -16/6, 16/6   #-9/5, 9/5
 
 
+# n_squares is a grid 7x7 to help you aim
+#                       ([(column, line, n_squares)])
+
+#coordinates = np.array([(4,5,7),(6,6,7)])
+#xmin, xmax, ymin, ymax = divide_in_squares(coordinates, xmin, xmax, ymin, ymax)
+
+
+# Number of iterations
 max_iter = 1000
 
 # How many top colors to use from the palette.png
