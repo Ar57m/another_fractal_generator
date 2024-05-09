@@ -4,7 +4,7 @@ import numpy as np
 #import cython
 
 import cv2
-from ctypes import cdll, c_double, POINTER, c_uint32, c_uint16, c_uint8, c_bool
+from ctypes import cdll, c_double, POINTER, c_uint32, c_uint16, c_uint8, c_bool, c_float
 
 
 
@@ -18,20 +18,26 @@ juliaset = lib.juliaset
 
 lib.process_array.argtypes = [POINTER(c_uint32), POINTER(c_uint8), c_uint16, c_uint16, c_double, c_uint16, c_double]
 lib.process_array.restype = None
-
+lib.scale.argtypes = [POINTER(c_float), POINTER(c_float), c_uint32, c_float, c_float] 
+lib.scale.restype = None
 
 fractal.argtypes = [POINTER(c_uint16), c_uint16, c_uint16, c_uint16, c_double, c_double, c_double, c_double, c_bool]
 juliaset.argtypes = [POINTER(c_uint16), c_uint16, c_uint16, c_uint16, c_double, c_double, c_double, c_double, c_double, c_double, c_bool]
 
 
-# Here I'm using some of my functions of my other project random_tools on github
-def scale( input_tensor, new_min, new_max):
-        current_min = np.min(input_tensor)
-        current_max = np.max(input_tensor)
-        if current_min == current_max: # to avoid infinity
-           current_min -= 1
-        scaled_tensor = (input_tensor - current_min) * (new_max - new_min) / (current_max - current_min) + new_min
-        return scaled_tensor
+
+def scale(input_array, min, max):
+    shape = input_array.shape
+    size = (input_array.size)
+    
+    input_array = input_array.copy().reshape(-1).astype(np.float32) 
+    input_array = input_array.ctypes.data_as(POINTER(c_float))
+    output_array = (c_float * (size))()
+    # Call the function
+    lib.scale(input_array, output_array, size, min, max)
+    # Convert the output array to a numpy array
+    output_array = np.ctypeslib.as_array(output_array).reshape(shape)
+    return output_array
 
 
 
@@ -47,10 +53,11 @@ def process_image(input_array, max_val, imgname):
     output_array = (c_uint8 * (width * height* 3))()
     # Call the function
     lib.process_array(input_array, output_array, width, height, max_val, 5000, max)
+    del input_array
     # Convert the output array to a numpy array
     output_array = np.ctypeslib.as_array(output_array).reshape(width, height, 3 )
 
-    output_image = cv2.cvtColor(output_array, cv2.COLOR_BGR2RGB) 
+    output_image = cv2.cvtColor(output_array.astype(np.uint8), cv2.COLOR_BGR2RGB) 
     
     del output_array
     cv2.imwrite(f'{imgname}.png', output_image) 
@@ -84,19 +91,36 @@ def image_to_array(image_path, min=0, max=2**24-1):
 
 
 # Image with palette
-def create_image(palette, data, filename, top_colors=4):
+def create_image(palette, data, filename, iterations, top_colors=4, lake_palette=None):
     data = data.copy()
-    shape = data.T.shape
-    palette = image_to_array(palette)
+    shape = data.shape
+    shape = (shape[1], shape[0])
+    data = data.reshape(shape)
+    palette = image_to_array(palette).astype(np.uint32)
+    
+    if lake_palette:
+        lake_palette = image_to_array(lake_palette).astype(np.uint32)
+        unique_colors, counts = np.unique(lake_palette, return_counts=True)
+        del lake_palette
+        sorted_indices = np.argsort(counts)[::-1]
+        array_top_colors_lake = unique_colors[sorted_indices][:top_colors]
+        del unique_colors, counts, sorted_indices
+        data = np.where(data>iterations, np.round(scale((np.sin(data.astype(np.float32)).reshape(-1)) , iterations+1, iterations+array_top_colors_lake.shape[0])).astype(np.uint32).reshape(shape), data).reshape(-1)
+        
+        for i, n in enumerate(array_top_colors_lake):
+            data[data == i+iterations+1] = n+iterations
+        del array_top_colors_lake
+        
+        
     unique_colors, counts = np.unique(palette, return_counts=True)
     sorted_indices = np.argsort(counts)[::-1]
-    
     array_top_colors = unique_colors[sorted_indices][:top_colors]
+    data = np.where(data<=iterations,np.round(scale(np.sin((data.astype(np.float64))) , 0, array_top_colors.shape[0]-1)).reshape(-1).astype(np.uint32),data).reshape(-1)
 
-    
-    data = np.round(scale((np.sin(data.astype(np.float64))) , 0, array_top_colors.shape[0]-1)).reshape(-1).astype(np.uint32)
     for i, n in enumerate(array_top_colors):
         data[data == i] = n
+    
+    del array_top_colors
     process_image(data.reshape(shape), np.float64(np.max(data)), filename )
 
 
@@ -137,29 +161,31 @@ height = int(4096) #2304
 
 # Here you can move around 
 xmin, xmax = -16/6, 16/6   #-16/5, 16/5
-ymin, ymax = -16/6, 16/6   #-9/5, 9/5
+ymin, ymax = (-16/6), (16/6)   #-9/5, 9/5
 
 
 # n_squares is a grid 7x7 to help you aim
 #                       ([(column, line, n_squares)])
 
-#coordinates = np.array([(4,5,7),(6,6,7)])
+#coordinates = np.array([(2,2,2),(1,2,2),(1,1,2)])
 #xmin, xmax, ymin, ymax = divide_in_squares(coordinates, xmin, xmax, ymin, ymax)
 
 
 # Number of iterations
 max_iter = 1000
 
+palette = "palette.png"
 # How many top colors to use from the palette.png
-top_colors = 10
+top_colors = 24
 
 # Julia set parameters
 juliaset_c_real = -0.8
 juliaset_c_imag = 0.16
 
 # Makes the part that converges visible
-lake = False
-
+lake = True
+# Palette path to another palette image
+lake_palette = "paa.png"
 
 
 
@@ -177,7 +203,7 @@ print("Took ", end_time - start_time, "seconds to generate")
 
 start_time = time.perf_counter()
 process_image(mandelbrot_set, (2**24-1), "generated_fractal" )
-create_image("palette.png",mandelbrot_set.reshape(width, height), "colorful", top_colors=top_colors)
+create_image(palette, mandelbrot_set.reshape(width, height), "colorful", max_iter, top_colors=top_colors, lake_palette=lake_palette)
 end_time = time.perf_counter()
 print("Took ", end_time - start_time, "seconds to convert")
 
@@ -194,7 +220,7 @@ print("Took ", end_time - start_time, "seconds to generate")
 
 start_time = time.perf_counter()
 process_image(julia_set, (2**24-1), "generated_fractal_julia_set" )
-create_image("palette.png",julia_set.reshape(width, height), "colorful_julia_set", top_colors=top_colors)
+create_image(palette, julia_set.reshape(width, height), "colorful_julia_set", max_iter, top_colors=top_colors, lake_palette=lake_palette)
 end_time = time.perf_counter()
 
 print("Took ", end_time - start_time, "seconds to convert")
