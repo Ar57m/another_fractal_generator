@@ -11,6 +11,8 @@
 #include <csignal>
 #include <cstdlib>
 
+#include <algorithm>
+
 
 
 
@@ -83,6 +85,28 @@ double e = M_E;       //2.718281828459045;
 
 
 extern "C" {
+    void scale(const float* input_tensor, float* scaled_tensor, uint32_t input_size, float new_min, float new_max) {
+        std::signal(SIGINT, signal_handler);
+        float current_min = *std::min_element(input_tensor, input_tensor + input_size);
+        float current_max = *std::max_element(input_tensor, input_tensor + input_size);
+
+        if (current_min == current_max){
+            current_min -= 1;
+        } 
+
+        float scale_factor = (new_max - new_min) / (current_max - current_min);
+        #pragma omp parallel for schedule(dynamic)
+        for (uint32_t i = 0; i < input_size; ++i) {
+            scaled_tensor[i] = (input_tensor[i] - current_min) * scale_factor + new_min;
+        }
+
+    }
+}
+
+
+
+
+extern "C" {
     void fractal(uint16_t* output, uint16_t width, uint16_t height, uint16_t max_iter, double xmin=-2, double xmax=2, double ymin=-2, double ymax=2, bool lake=false) {
 
         std::signal(SIGINT, signal_handler);
@@ -118,7 +142,7 @@ extern "C" {
                 if (z_real * z_real + z_imag * z_imag < 4 && lake) {
                     // Point is in the set, use lake color
                     double lake_value = log(1 + sqrt(z_real * z_real + z_imag * z_imag) );
-                    uint16_t color = (uint16_t)(lake_value * max_iter);
+                    uint16_t color = (uint16_t)(lake_value * max_iter) + max_iter;
                     output[y *width + x] = color;
                 } else {
                     // Point is outside the set, color depends on the number of iterations
@@ -128,6 +152,10 @@ extern "C" {
         }
     }
 }
+
+
+
+
 
 extern "C" {
 
@@ -165,7 +193,7 @@ extern "C" {
                 if (z_real * z_real + z_imag * z_imag < 4 && lake) {
                     // Point is in the set, use lake color
                     double lake_value = log(1 + sqrt(z_real * z_real + z_imag * z_imag) );
-                    uint16_t color = (uint16_t)(lake_value * max_iter);
+                    uint16_t color = (uint16_t)(lake_value * max_iter) + max_iter;
                     output[y *width + x] = color;
                 } else {
                     // Point is outside the set, color depends on the number of iterations
@@ -185,9 +213,9 @@ extern "C" {
         std::signal(SIGINT, signal_handler);
         // Iterate over each batch
         #pragma omp parallel for schedule(dynamic)
-        for(int i = 0; i < width * height; i += batch_size) {
+        for(uint32_t i = 0; i < width * height; i += batch_size) {
             // Iterate over each value in the batch
-            for(int j = i; j < i + batch_size && j < width * height; j++) {
+            for(uint32_t j = i; j < i + batch_size && j < width * height; j++) {
                 // Convert the value to double and scale it
                 double value = (static_cast<double>((input_array[j])) / npmax) * max_value;
 
