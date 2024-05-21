@@ -185,7 +185,7 @@ juliaset_c_imag = 0.16
 # Makes the part that converges visible
 lake = True
 # Palette path to another palette image
-lake_palette = "paa.png"
+lake_palette = "lake_palette.png"
 
 
 
