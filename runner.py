@@ -126,8 +126,9 @@ def create_image(palette, data, filename, iterations, top_colors=4, lake_palette
 
 # This helps you to aim by dividing in squares(grid)
 def divide_in_squares(list_c, xmin, xmax, ymin, ymax):
-    list_c[:,:2] = list_c[:,:2]-1
-    for col, line, n_squares in list_c:
+    list = list_c.copy()
+    list[:,:2] = list[:,:2]-1
+    for col, line, n_squares in list:
         size_x = (xmax - xmin) / n_squares
         size_y = (ymax - ymin) / n_squares
         
@@ -138,7 +139,6 @@ def divide_in_squares(list_c, xmin, xmax, ymin, ymax):
         xmin, xmax, ymin, ymax = new_xmin, new_xmax, new_ymin, new_ymax
     
     return xmin, xmax, ymin, ymax
-
 
 
 
@@ -155,76 +155,127 @@ def depth_to_intensity(rgb_image, depth_map):
 
 
 
-width = int(4096) # I'm using ratio 1/1
-height = int(4096) #2304
-
-
-# Here you can move around 
-xmin, xmax = -16/6, 16/6   #-16/5, 16/5
-ymin, ymax = (-16/6), (16/6)   #-9/5, 9/5
-
-
-# n_squares is a grid 7x7 to help you aim
-#                       ([(column, line, n_squares)])
-
-#coordinates = np.array([(2,2,2),(1,2,2),(1,1,2)])
-#xmin, xmax, ymin, ymax = divide_in_squares(coordinates, xmin, xmax, ymin, ymax)
-
+width = int(1536) # I'm using ratio 1/1
+height = int(1536) #2304
 
 # Number of iterations
 max_iter = 1000
 
+max_zoom = 150 #how many images # it's gonna generate a little bit more images than expected
+per_zoom = 0.9  #how much zoom after aiming
+mandelbrot_on = False
+
+# Here you can move around 
+xmin, xmax = (-16/6),(16/6)   #-16/5, 16/5
+ymin, ymax = (-16/6), (16/6)  #-9/5, 9/5
+
+
+# n_squares is a grid 7x7 to help you aim
+#                       ([(column, line, grid nxn)])
+coordinates = np.array([(1,2,3),(2,2,3),(2,2,3),(2,2,3),(1,2,3),(2,2,3),(1,2,3),(2,2,3),(1,2,3),(2,2, 3)])
+
+#xmin1, xmax1, ymin1, ymax1 = divide_in_squares(coordinates, xmin, xmax, ymin, ymax)
+
+    
 palette = "palette.png"
+use_palette = True
 # How many top colors to use from the palette.png
 top_colors = 24
 
 # Julia set parameters
+juliaset_on = True
 juliaset_c_real = -0.8
 juliaset_c_imag = 0.16
 
 # Makes the part that converges visible
-lake = True
+lake = False
 # Palette path to another palette image
 lake_palette = "paa.png"
 
 
 
-import time
+        
+def activate(n, max_zoom, xmin, xmax, ymin, ymax):
 
-# Mandelbrot Set
-start_time = time.perf_counter()
+        max_zoom = str(max_zoom)
+        
+        target_length = len(max_zoom)
+        n = str(n)
+        n = n.zfill(target_length)
+        
+        import time
+        
+        # Mandelbrot Set
+        if mandelbrot_on:
+            start_time = time.perf_counter()
+            
+            mandelbrot_set = np.empty((height, width), dtype=np.uint16)
+            fractal(mandelbrot_set.ctypes.data_as(POINTER(c_uint16)), width, height, max_iter, xmin, xmax, ymin, ymax, lake)
+            
+            end_time = time.perf_counter()
+            
+            print("Took ", end_time - start_time, "seconds to generate")
+            
+            start_time = time.perf_counter()
+            if use_palette:
+                create_image(palette, mandelbrot_set.reshape(width, height), n+"-"+ "colorful", max_iter, top_colors=top_colors, lake_palette=lake_palette)
+            else:
+                process_image(mandelbrot_set, (2**24-1), n+"-"+"generated_fractal" )
+            end_time = time.perf_counter()
+            print("Took ", end_time - start_time, "seconds to convert")
+            
+        
+        # Julia Set
+        if juliaset_on:
+            start_time = time.perf_counter()
+            
+            julia_set = np.empty((height, width), dtype=np.uint16)
+            juliaset(julia_set.ctypes.data_as(POINTER(c_uint16)), width, height, max_iter, juliaset_c_real, juliaset_c_imag, xmin, xmax, ymin, ymax, lake)
+            
+            end_time = time.perf_counter()
+            
+            print("Took ", end_time - start_time, "seconds to generate")
+            
+            start_time = time.perf_counter()
+            if use_palette:
+                create_image(palette, julia_set.reshape(width, height), n+"-"+"colorful_julia_set" , max_iter, top_colors=top_colors, lake_palette=lake_palette)
+            else:
+                process_image(julia_set, (2**24-1), n+"-" +"generated_fractal_julia_set")
+            end_time = time.perf_counter()
+            
+            print("Took ", end_time - start_time, "seconds to convert")
 
-mandelbrot_set = np.empty((height, width), dtype=np.uint16)
-fractal(mandelbrot_set.ctypes.data_as(POINTER(c_uint16)), width, height, max_iter, xmin, xmax, ymin, ymax, lake)
 
-end_time = time.perf_counter()
+# The first image generated
+activate("0", max_zoom, xmin, xmax, ymin, ymax)
 
-print("Took ", end_time - start_time, "seconds to generate")
-
-start_time = time.perf_counter()
-process_image(mandelbrot_set, (2**24-1), "generated_fractal" )
-create_image(palette, mandelbrot_set.reshape(width, height), "colorful", max_iter, top_colors=top_colors, lake_palette=lake_palette)
-end_time = time.perf_counter()
-print("Took ", end_time - start_time, "seconds to convert")
+xmin1, xmax1, ymin1, ymax1 =  xmin, xmax, ymin, ymax
 
 
-# Julia Set
-start_time = time.perf_counter()
 
-julia_set = np.empty((height, width), dtype=np.uint16)
-juliaset(julia_set.ctypes.data_as(POINTER(c_uint16)), width, height, max_iter, juliaset_c_real, juliaset_c_imag, xmin, xmax, ymin, ymax, lake)
+for i in range(coordinates.shape[0]+max_zoom): 
+    if i < 5:
+        xmin, xmax, ymin, ymax = divide_in_squares(coordinates[:(i+1), :], xmin1, xmax1, ymin1, ymax1)
+    else:
+        
+        x_center = (xmin + xmax) / 2
+        y_center = (ymin + ymax) / 2
+        
+        widtho = (xmax - xmin) * per_zoom
+        heighto = (ymax - ymin) * per_zoom
+        
+        xmin = x_center - widtho / 2
+        xmax = x_center + widtho / 2
+        ymin = y_center - heighto / 2
+        ymax = y_center + heighto / 2
 
-end_time = time.perf_counter()
-
-print("Took ", end_time - start_time, "seconds to generate")
-
-start_time = time.perf_counter()
-process_image(julia_set, (2**24-1), "generated_fractal_julia_set" )
-create_image(palette, julia_set.reshape(width, height), "colorful_julia_set", max_iter, top_colors=top_colors, lake_palette=lake_palette)
-end_time = time.perf_counter()
-
-print("Took ", end_time - start_time, "seconds to convert")
+    activate(i+1, coordinates.shape[0]+max_zoom, xmin, xmax, ymin, ymax)
 
 
 
 
+        
+        
+        
+        
+        
