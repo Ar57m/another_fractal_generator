@@ -163,7 +163,7 @@ max_iter = 1000
 
 max_zoom = 150 #how many images # it's gonna generate a little bit more images than expected
 per_zoom = 0.9  #how much zoom after aiming
-mandelbrot_on = False
+mandelbrot_on = True
 
 # Here you can move around 
 xmin, xmax = (-16/6),(16/6)   #-16/5, 16/5
@@ -183,14 +183,14 @@ use_palette = True
 top_colors = 24
 
 # Julia set parameters
-juliaset_on = True
+juliaset_on = False
 juliaset_c_real = -0.8
 juliaset_c_imag = 0.16
 
 # Makes the part that converges visible
 lake = False
 # Palette path to another palette image
-lake_palette = "paa.png"
+lake_palette = "lake_palette.png"
 
 
 
