@@ -2,9 +2,9 @@ import numpy as np
 #from PIL import Image
 #%pip install cython
 #import cython
-
+import time
 import cv2
-from ctypes import cdll, c_double, POINTER, c_uint32, c_uint16, c_uint8, c_bool, c_float
+from ctypes import cdll, c_double, POINTER, c_uint32, c_uint16, c_uint8, c_bool, c_float #, c_longdouble
 
 
 
@@ -90,37 +90,51 @@ def image_to_array(image_path, min=0, max=2**24-1):
         return array_image
 
 
-# Image with palette
-def create_image(palette, data, filename, iterations, top_colors=4, lake_palette=None):
-    data = data.copy()
-    shape = data.shape
-    shape = (shape[1], shape[0])
-    data = data.reshape(shape)
-    palette = image_to_array(palette).astype(np.uint32)
-    
-    if lake_palette:
+def palette_load(palette, top_colors=4, lake_palette=False, lake=False):
+    if (lake == False) or (lake_palette == False):
+        palette = image_to_array(palette).astype(np.uint32)
+        unique_colors, counts = np.unique(palette, return_counts=True)
+        del palette
+        sorted_indices = np.argsort(counts)[::-1]
+        array_top_colors = unique_colors[sorted_indices][:top_colors]
+        return array_top_colors, False
+    else:
+        palette = image_to_array(palette).astype(np.uint32)
+        unique_colors, counts = np.unique(palette, return_counts=True)
+        del palette
+        sorted_indices = np.argsort(counts)[::-1]
+        array_top_colors = unique_colors[sorted_indices][:top_colors]
+        
+        # Lake palette
         lake_palette = image_to_array(lake_palette).astype(np.uint32)
         unique_colors, counts = np.unique(lake_palette, return_counts=True)
         del lake_palette
         sorted_indices = np.argsort(counts)[::-1]
         array_top_colors_lake = unique_colors[sorted_indices][:top_colors]
-        del unique_colors, counts, sorted_indices
-        data = np.where(data>iterations, np.round(scale((np.sin(data.astype(np.float32)).reshape(-1)) , iterations+1, iterations+array_top_colors_lake.shape[0])).astype(np.uint32).reshape(shape), data).reshape(-1)
-        
-        for i, n in enumerate(array_top_colors_lake):
-            data[data == i+iterations+1] = n+iterations
-        del array_top_colors_lake
-        
-        
-    unique_colors, counts = np.unique(palette, return_counts=True)
-    sorted_indices = np.argsort(counts)[::-1]
-    array_top_colors = unique_colors[sorted_indices][:top_colors]
-    data = np.where(data<=iterations,np.round(scale(np.sin((data.astype(np.float64))) , 0, array_top_colors.shape[0]-1)).reshape(-1).astype(np.uint32),data).reshape(-1)
+        return array_top_colors, array_top_colors_lake
 
-    for i, n in enumerate(array_top_colors):
-        data[data == i] = n
+
+
+
+# Image with palette
+def create_image(palette, data, filename, iterations, array_top_colors, lake=False):
     
-    del array_top_colors
+    data = data.copy()
+    shape = data.shape
+    shape = (shape[1], shape[0])
+    data = data.reshape(shape)
+    
+    if (lake == True) and (isinstance(array_top_colors[1], np.ndarray)) :
+        data = np.where(data>iterations, np.round(scale((np.sin(data.astype(np.float32)).reshape(-1)) , iterations+1, iterations+array_top_colors[1].shape[0])).astype(np.uint32).reshape(shape), data) #.reshape(-1)
+        for i, n in enumerate(array_top_colors[1]):
+            data[data == i+iterations+1] = n+iterations
+            
+        
+    data = np.where(data<=iterations,np.round(scale(np.sin((data.astype(np.float64))) , 0, array_top_colors[0].shape[0]-1)).astype(np.uint32),data).reshape(-1)
+    
+    for i, n in enumerate(array_top_colors[0]):
+        data[data == i] = n
+
     process_image(data.reshape(shape), np.float64(np.max(data)), filename )
 
 
@@ -155,28 +169,29 @@ def depth_to_intensity(rgb_image, depth_map):
 
 
 
-width = int(1536) # I'm using ratio 1/1
-height = int(1536) #2304
+width = int(1600) # I'm using ratio 1/1
+height = int(1600) #2304
 
 # Number of iterations
 max_iter = 1000
 
-max_zoom = 150 #how many images # it's gonna generate a little bit more images than expected
+max_zoom = 89 #how many images # it's gonna generate a little bit more images than expected
 per_zoom = 0.9  #how much zoom after aiming
 mandelbrot_on = True
 
 # Here you can move around 
-xmin, xmax = (-16/6),(16/6)   #-16/5, 16/5
-ymin, ymax = (-16/6), (16/6)  #-9/5, 9/5
+xmin_xmax = np.array([((-16/6)), ((16/6))], dtype=np.float64)        #-16/5, 16/5
+ymin_ymax = np.array([(-16/6), (16/6)], dtype=np.float64)             #-9/5, 9/5
+
 
 
 # n_squares is a grid 7x7 to help you aim
 #                       ([(column, line, grid nxn)])
-coordinates = np.array([(1,2,3),(2,2,3),(2,2,3),(2,2,3),(1,2,3),(2,2,3),(1,2,3),(2,2,3),(1,2,3),(2,2, 3)])
+coordinates = np.array([(1,2,3),(3,2,3),(1,2,3),(1,2,3),(3,3,5),(2,2,3),(1,2,3),(2,2,3),(1,2,3),(2,2,3)])  #np.array([(1,2,3),(2,2,3),(2,2,3),(2,2,3),(1,2,3),(2,2,3),(1,2,3),(2,2,3),(1,2,3),(2,2, 3)])
 
-#xmin1, xmax1, ymin1, ymax1 = divide_in_squares(coordinates, xmin, xmax, ymin, ymax)
+xmin, xmax, ymin, ymax = xmin_xmax[0], xmin_xmax[1], ymin_ymax[0], ymin_ymax[1]
 
-    
+
 palette = "palette.png"
 use_palette = True
 # How many top colors to use from the palette.png
@@ -191,19 +206,18 @@ juliaset_c_imag = 0.16
 lake = False
 # Palette path to another palette image
 lake_palette = "lake_palette.png"
-
-
+# Here it's loading the palette before the generation and conversion
+array_top_colors = palette_load(palette, top_colors, lake_palette, lake)
 
         
-def activate(n, max_zoom, xmin, xmax, ymin, ymax):
+def activate(n_iter, max_zoom, xmin, xmax, ymin, ymax):
 
         max_zoom = str(max_zoom)
         
         target_length = len(max_zoom)
-        n = str(n)
-        n = n.zfill(target_length)
+        n_iter = str(n_iter)
+        n_iter = n_iter.zfill(target_length)
         
-        import time
         
         # Mandelbrot Set
         if mandelbrot_on:
@@ -218,9 +232,9 @@ def activate(n, max_zoom, xmin, xmax, ymin, ymax):
             
             start_time = time.perf_counter()
             if use_palette:
-                create_image(palette, mandelbrot_set.reshape(width, height), n+"-"+ "colorful", max_iter, top_colors=top_colors, lake_palette=lake_palette)
+                create_image(palette, mandelbrot_set.reshape(width, height), n_iter+"-"+ "colorful", max_iter, array_top_colors, lake)
             else:
-                process_image(mandelbrot_set, (2**24-1), n+"-"+"generated_fractal" )
+                process_image(mandelbrot_set, (2**24-1), n_iter+"-"+"generated_fractal" )
             end_time = time.perf_counter()
             print("Took ", end_time - start_time, "seconds to convert")
             
@@ -238,13 +252,13 @@ def activate(n, max_zoom, xmin, xmax, ymin, ymax):
             
             start_time = time.perf_counter()
             if use_palette:
-                create_image(palette, julia_set.reshape(width, height), n+"-"+"colorful_julia_set" , max_iter, top_colors=top_colors, lake_palette=lake_palette)
+                create_image(palette, julia_set.reshape(width, height), n_iter+"-"+"colorful_julia_set" , max_iter, array_top_colors, lake)
             else:
-                process_image(julia_set, (2**24-1), n+"-" +"generated_fractal_julia_set")
+                process_image(julia_set, (2**24-1), n_iter+"-" +"generated_fractal_julia_set")
             end_time = time.perf_counter()
             
             print("Took ", end_time - start_time, "seconds to convert")
-
+            
 
 # The first image generated
 activate("0", max_zoom, xmin, xmax, ymin, ymax)
@@ -270,8 +284,6 @@ for i in range(coordinates.shape[0]+max_zoom):
         ymax = y_center + heighto / 2
 
     activate(i+1, coordinates.shape[0]+max_zoom, xmin, xmax, ymin, ymax)
-
-
 
 
         
