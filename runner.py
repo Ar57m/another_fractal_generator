@@ -138,7 +138,7 @@ def create_image(palette, data, filename, iterations, array_top_colors, lake=Fal
     for i, n in enumerate(array_top_colors[0]):
         data[data == i] = n
 
-    process_image(data.reshape(shape), np.float64(np.max(data)), filename )
+    process_image(data.reshape(shape), np.max(data), filename )
 
 
 # This helps you to aim by dividing in squares(grid)
@@ -172,8 +172,8 @@ def depth_to_intensity(rgb_image, depth_map):
 
 
 
-width = int(4096*2) # I'm using ratio 1/1
-height = int(4096*2) #2304
+width = int(4096) # I'm using ratio 1/1
+height = int(4096) #2304
 
 # Number of iterations
 max_iter = 1000
@@ -204,7 +204,7 @@ juliaset_c_real = -0.8
 juliaset_c_imag = 0.16
 
 # Makes the part that converges visible
-lake = False
+lake = True
 # Palette path to another palette image
 lake_palette = "lake_palette.png"
 # Here it's loading the palette before the generation and conversion
