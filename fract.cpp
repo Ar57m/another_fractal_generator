@@ -95,15 +95,13 @@ extern "C" {
         } 
 
         float scale_factor = (new_max - new_min) / (current_max - current_min);
-        #pragma omp parallel for schedule(dynamic)
+        #pragma omp parallel for schedule(dynamic, 1)
         for (uint32_t i = 0; i < input_size; ++i) {
             scaled_tensor[i] = (input_tensor[i] - current_min) * scale_factor + new_min;
         }
 
     }
 }
-
-
 
 
 extern "C" {
