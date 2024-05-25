@@ -1,7 +1,4 @@
 import numpy as np
-#from PIL import Image
-#%pip install cython
-#import cython
 import time
 import cv2
 from ctypes import cdll, c_double, POINTER, c_uint32, c_uint16, c_uint8, c_bool, c_float #, c_longdouble
@@ -140,7 +137,6 @@ def create_image(palette, data, filename, iterations, array_top_colors, lake=Fal
             
         
     #data = np.where(data<=iterations,np.round(scale(np.sin((data.astype(np.float64))) , 0, array_top_colors[0].shape[0]-1)).astype(np.uint32),data).reshape(-1)
-    #data = np.where(data<=iterations,(scale_fast(np.sin(data.astype(np.float32))+1, array_top_colors[0].shape[0]-1)),data).reshape(-1)
     data = np.where(data<=iterations,(scale_fast(np.sin(data.astype(np.float32))+1, array_top_colors[0].shape[0]-1)),data).reshape(-1)
     for i, n in enumerate(array_top_colors[0]):
         data[data == i] = n
@@ -196,7 +192,7 @@ fractals = {
     'sandpile': False,     # Try sandpile with less resolution and much more iterations(=grains of sand) to get better results, but don't let the colored area touch the border or you will get broken results.
 }
 
-palette = "palette.png" #"palette.png"
+palette = "palette.png"
 use_palette = True
 
 # How many top colors to use from the palette.png
