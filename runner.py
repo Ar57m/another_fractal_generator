@@ -1,7 +1,4 @@
 import numpy as np
-#from PIL import Image
-#%pip install cython
-#import cython
 import time
 import cv2
 from ctypes import cdll, c_double, POINTER, c_uint32, c_uint16, c_uint8, c_bool, c_float #, c_longdouble
@@ -70,7 +67,7 @@ def process_image(input_array, max_val, imgname):
 def image_to_array(image_path, min=0, max=2**24-1):
         img = cv2.imread(image_path)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) 
-        array_image = np.array(img).astype(np.int64)
+        array_image = np.array(img).astype(np.uint32)
     
         if array_image.ndim != 3:
             array_image = np.array(img.convert("RGBA"))
@@ -82,10 +79,7 @@ def image_to_array(image_path, min=0, max=2**24-1):
               if array_image.shape[2] == 3:
                       array_image = (array_image[:, :, 0]*(256**2)+array_image[:, :, 1]*(256)+array_image[:, :, 2])
     
-        shape = array_image.shape
-        array_image = array_image.reshape(shape[0],shape[1])
 
-        array_image = np.clip(array_image , min, max)
         
         return array_image
 
