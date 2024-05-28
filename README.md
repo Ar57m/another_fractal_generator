@@ -39,7 +39,7 @@ On that python script there is a lot of options to change if needed.
 Mandelbrot
 <div align="center">
   <picture>
-    <img alt="mandelbrot" height="324px" src="colorful_mandelbro.png">
+    <img alt="mandelbrot" height="324px" src="colorful_mandelbrot.png">
   </picture>
 </div>
 
@@ -48,7 +48,7 @@ Mandelbrot
 Juliaset
 <div align="center">
   <picture>
-    <img alt="juliaset" height="324px" src="colorful_juliase.png">
+    <img alt="juliaset" height="324px" src="colorful_juliaset.png">
   </picture>
 </div>
 
@@ -57,7 +57,7 @@ Juliaset
 Lyapunov
 <div align="center">
   <picture>
-    <img alt="lyapunov" height="324px" src="colorful_lyapuno.png">
+    <img alt="lyapunov" height="324px" src="colorful_lyapunov.png">
   </picture>
 </div>
 
@@ -66,7 +66,7 @@ Lyapunov
 Abelian Sandpile Fractal
 <div align="center">
   <picture>
-    <img alt="sandpile" height="324px" src="colorful_sandpil.png">
+    <img alt="sandpile" height="324px" src="colorful_sandpile.png">
   </picture>
 </div>
 
