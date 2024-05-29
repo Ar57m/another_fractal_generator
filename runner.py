@@ -191,7 +191,7 @@ palette = "palette.png"
 use_palette = True
 
 # How many top colors to use from the palette.png
-top_colors = 12
+top_colors = 24
 
 # Julia set parameters
 juliaset_c_real = -0.8
