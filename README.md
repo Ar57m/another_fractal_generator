@@ -14,7 +14,7 @@ Requirements:
 ```sh
 pip install numpy opencv-python
 ```
-(on termux is necessary to `pkg opencv-python`)
+(on termux is necessary to `apt install x11-repo && apt update && apt install opencv && apt install opencv-python`)
 <br>
 
 ```sh
