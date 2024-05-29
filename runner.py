@@ -184,7 +184,7 @@ fractals = {
 
 zoom = False
 max_zoom = 20 # How many images # it's gonna generate  +n_coordinates more images than expected
-per_zoom = 0.9 # How much zoom after aiming
+per_zoom = 0.9 # Zooming after aiming: Using a value greater than 1.0 will zoom out; using a value less than 1.0 will zoom in
 video_out = False # If you want to generate a video with the images
 
 palette = "palette.png"
