@@ -177,7 +177,7 @@ max_grains = 3
 # You can generate different types of fractals
 fractals = {
     'mandelbrot': True,
-    'juliaset': True,
+    'juliaset': False,
     'lyapunov': False,    # Lyapunov seems to run very slowly at high resolution try it with 1600x1600.
     'sandpile': False,     # Try sandpile with less resolution and much more iterations(=grains of sand) to get better results, but don't let the colored area touch the border or you will get broken results.
 }
@@ -185,7 +185,7 @@ fractals = {
 zoom = False
 max_zoom = 20 # How many images # it's gonna generate  +n_coordinates more images than expected
 per_zoom = 0.9 # How much zoom after aiming
-video_out = False
+video_out = False # If you want to generate a video with the images
 
 palette = "palette.png"
 use_palette = True
