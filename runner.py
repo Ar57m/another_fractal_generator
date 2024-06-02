@@ -173,8 +173,8 @@ def divide_in_squares(list_c, xmin, xmax, ymin, ymax):
 
 
 
-width = int(4096) # I'm using ratio 1/1
-height = int(4096) #2304
+width = int(1600) # I'm using ratio 1/1
+height = int(1600) #2304
 
 # Number of iterations
 max_iter = 1000
@@ -190,17 +190,19 @@ fractals = {
     'sandpile': False,     # Try sandpile with less resolution and much more iterations(=grains of sand) to get better results, but don't let the colored area touch the border or you will get broken results.
 }
 
+
 zoom = False
 max_zoom = 20 # How many images # it's gonna generate  +n_coordinates more images than expected
-per_zoom = 0.9 # How much zoom after aiming
-video_out = False
+per_zoom = 0.9 # Zooming after aiming: Using a value greater than 1.0 will zoom out; using a value less than 1.0 will zoom in
+video_out = False # If you want to generate a video with the images
 
-palette = "palette.png"
+
+palette = "palette.png"  # Palette location
 use_palette = True
 
 # How many top colors to use from the palette.png
 top_colors = 24
-shift_palette = (0, 0)   # This shift the palette, you can set negative and positive numbers.
+shift_palette = (0, 0)   # This shift the palette, you can set negative and positive integers.
 
 # Julia set parameters
 juliaset_c_real = -0.8
@@ -215,8 +217,8 @@ array_top_colors = palette_load(palette, top_colors, lake_palette, lake)
 
 
 # Here you can move around 
-xmin_xmax = np.array([(-(16/6)), ((16/6))], dtype=np.float64)*2     #-16/5, 16/5
-ymin_ymax = np.array([-(16/6), (16/6)], dtype=np.float64)*2           #-9/5, 9/5
+xmin_xmax = np.array([(-(16/6)), ((16/6))], dtype=np.float64)     #-16/5, 16/5
+ymin_ymax = np.array([-(16/6), (16/6)], dtype=np.float64)           #-9/5, 9/5
 
 
 
