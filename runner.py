@@ -128,8 +128,8 @@ def create_image(palette, data, filename, iterations, array_top_colors, lake=Fal
     np.roll(array_top_colors[0], shift_palette[0]),
     np.roll(array_top_colors[1], shift_palette[1]) if array_top_colors[1] is not False else False
     )
+
     
-    beg = time.time()
     if (lake and isinstance(array_top_colors[1], np.ndarray) and not ('lyapunov' in filename or 'sandpile' in filename)):
         temp = data > iterations
         
@@ -147,7 +147,7 @@ def create_image(palette, data, filename, iterations, array_top_colors, lake=Fal
     else:
         data = scale_fast(data, array_top_colors[0].shape[0] - 1)
         data = np.take(array_top_colors[0], data)
-    print(time.time()-beg) 
+    
     process_image(data.reshape(shape), np.max(data), filename)
     
     
